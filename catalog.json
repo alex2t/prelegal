@@ -1,0 +1,80 @@
+{
+  "source": "https://github.com/CommonPaper",
+  "license": "CC BY 4.0",
+  "license_url": "https://creativecommons.org/licenses/by/4.0/",
+  "retrieved": "2026-09-10",
+  "templates": [
+    {
+      "name": "Mutual Non-Disclosure Agreement (Standard Terms)",
+      "description": "Common Paper standard Mutual NDA Standard Terms that let two parties exchange confidential information for evaluating a potential business relationship; covers permitted use, exceptions, term, return/destruction, and equitable relief. Used together with the MNDA cover page.",
+      "filename": "Mutual-NDA.md",
+      "source": "https://github.com/CommonPaper/Mutual-NDA"
+    },
+    {
+      "name": "Mutual Non-Disclosure Agreement (Cover Page)",
+      "description": "Fill-in-the-blanks cover page for the Common Paper Mutual NDA capturing the purpose, MNDA term, term of confidentiality, governing law and jurisdiction, modifications, and signatures. Incorporates the MNDA Standard Terms by reference.",
+      "filename": "Mutual-NDA-coverpage.md",
+      "source": "https://github.com/CommonPaper/Mutual-NDA"
+    },
+    {
+      "name": "Cloud Service Agreement",
+      "description": "Common Paper standard Cloud Service Agreement governing subscription access to a SaaS/cloud product, including support, user accounts, usage data and machine learning, privacy and security, payment and taxes, term and termination, warranties, limitation of liability, indemnification, and confidentiality.",
+      "filename": "CSA.md",
+      "source": "https://github.com/CommonPaper/CSA"
+    },
+    {
+      "name": "Design Partner Agreement",
+      "description": "Common Paper standard Design Partner Agreement for an early customer collaborating with a vendor on product development, covering the collaboration scope, feedback, intellectual property ownership, confidentiality, and optional early access to the product.",
+      "filename": "Design-Partner-Agreement.md",
+      "source": "https://github.com/CommonPaper/Design-Partner-Agreement"
+    },
+    {
+      "name": "Service Level Agreement",
+      "description": "Common Paper standard Service Level Agreement defining uptime commitments, how availability is measured, exclusions, and the service credits owed when commitments are missed. Attaches to a Cloud Service Agreement.",
+      "filename": "SLA.md",
+      "source": "https://github.com/CommonPaper/SLA"
+    },
+    {
+      "name": "Professional Services Agreement",
+      "description": "Common Paper standard Professional Services Agreement for statement-of-work-based consulting or implementation work, covering services and SOWs, fees and expenses, change requests, intellectual property in deliverables, warranties, and liability.",
+      "filename": "PSA.md",
+      "source": "https://github.com/CommonPaper/PSA"
+    },
+    {
+      "name": "Data Processing Agreement",
+      "description": "Common Paper standard Data Processing Agreement addressing GDPR / UK GDPR controller, processor, and subprocessor relationships, international data transfers, security measures, data subject requests, audits, and return or deletion of personal data.",
+      "filename": "DPA.md",
+      "source": "https://github.com/CommonPaper/DPA"
+    },
+    {
+      "name": "Software License Agreement",
+      "description": "Common Paper standard Software License Agreement for licensing installed or downloadable software, covering license scope and restrictions, delivery and support, payment, proprietary rights, warranties, limitation of liability, indemnification, and confidentiality.",
+      "filename": "Software-License-Agreement.md",
+      "source": "https://github.com/CommonPaper/Software-License-Agreement"
+    },
+    {
+      "name": "Partnership Agreement",
+      "description": "Common Paper standard Partnership Agreement for a commercial partnership (such as referral, reseller, or co-marketing) between two companies, covering each party's responsibilities, fees and payment, intellectual property and marketing rights, term, and termination.",
+      "filename": "Partnership-Agreement.md",
+      "source": "https://github.com/CommonPaper/Partnership-Agreement"
+    },
+    {
+      "name": "Business Associate Agreement",
+      "description": "Common Paper standard HIPAA Business Associate Agreement setting out a business associate's obligations for protected health information, including permitted uses and disclosures, safeguards, subcontractor flow-down, breach notification, and return or destruction of PHI on termination.",
+      "filename": "BAA.md",
+      "source": "https://github.com/CommonPaper/BAA"
+    },
+    {
+      "name": "Pilot Agreement",
+      "description": "Common Paper standard Pilot Agreement for a time-limited paid or free evaluation of a product, covering pilot access and scope, fees, pilot period and success criteria, intellectual property, and conversion into a full agreement.",
+      "filename": "Pilot-Agreement.md",
+      "source": "https://github.com/CommonPaper/Pilot-Agreement"
+    },
+    {
+      "name": "AI Addendum",
+      "description": "Common Paper standard AI Addendum that supplements an existing agreement with terms for AI products and features, covering AI services, training on customer data, ownership and use of inputs and outputs, restrictions, and allocation of responsibility for AI output.",
+      "filename": "AI-Addendum.md",
+      "source": "https://github.com/CommonPaper/AI-Addendum"
+    }
+  ]
+}
