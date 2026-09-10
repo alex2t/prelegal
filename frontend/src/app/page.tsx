@@ -1,0 +1,99 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import NdaForm from "@/components/NdaForm";
+import NdaPreview from "@/components/NdaPreview";
+import {
+  defaultFormData,
+  missingRequiredFields,
+  ndaFileSlug,
+} from "@/lib/nda";
+
+type DownloadState = "idle" | "working" | "error";
+
+export default function Home() {
+  const [data, setData] = useState(defaultFormData);
+  const [downloadState, setDownloadState] = useState<DownloadState>("idle");
+
+  const missing = useMemo(() => missingRequiredFields(data), [data]);
+  const canDownload = missing.length === 0 && downloadState !== "working";
+
+  async function handleDownload() {
+    if (missing.length > 0) return;
+    setDownloadState("working");
+    try {
+      const { generateNdaBlob } = await import("@/components/NdaPdf");
+      const blob = await generateNdaBlob(data);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `Mutual-NDA-${ndaFileSlug(data)}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      setDownloadState("idle");
+    } catch (error) {
+      console.error("Failed to generate NDA PDF", error);
+      setDownloadState("error");
+    }
+  }
+
+  return (
+    <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-10">
+      <header className="mb-8">
+        <h1 className="text-2xl font-bold text-slate-900">
+          Mutual NDA creator
+        </h1>
+        <p className="mt-1 text-sm text-slate-600">
+          Fill in the key terms, review the generated agreement, and download it
+          as a PDF. Based on the{" "}
+          <a
+            className="underline"
+            href="https://commonpaper.com/standards/mutual-nda/1.0/"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Common Paper Mutual NDA
+          </a>{" "}
+          (CC BY 4.0).
+        </p>
+      </header>
+
+      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <section aria-label="NDA details">
+          <NdaForm data={data} onChange={setData} />
+        </section>
+
+        <section aria-label="Document preview" className="lg:sticky lg:top-6 lg:self-start">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h2 className="text-base font-semibold text-slate-900">Preview</h2>
+            <button
+              type="button"
+              onClick={handleDownload}
+              disabled={!canDownload}
+              className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+            >
+              {downloadState === "working" ? "Generating…" : "Download PDF"}
+            </button>
+          </div>
+
+          {missing.length > 0 ? (
+            <p className="mb-3 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              Add the following before downloading: {missing.join(", ")}.
+            </p>
+          ) : null}
+          {downloadState === "error" ? (
+            <p className="mb-3 rounded-md bg-red-50 px-3 py-2 text-xs text-red-700">
+              Something went wrong generating the PDF. Please try again.
+            </p>
+          ) : null}
+
+          <div className="max-h-[70vh] overflow-y-auto rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+            <NdaPreview data={data} />
+          </div>
+        </section>
+      </div>
+    </main>
+  );
+}
