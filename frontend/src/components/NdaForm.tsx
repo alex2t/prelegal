@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent } from "react";
+import { ChangeEvent, useState } from "react";
 import {
   ConfidentialityTermKind,
   MndaTermKind,
@@ -31,8 +31,36 @@ export default function NdaForm({ data, onChange }: NdaFormProps) {
     onChange({ ...data, [key]: { ...data[key], [field]: value } });
   }
 
-  const numberValue = (event: ChangeEvent<HTMLInputElement>) =>
-    Math.max(1, Math.round(Number(event.target.value) || 1));
+  // Years fields are edited as free-text local state so the input can be
+  // cleared and retyped (e.g. "1" -> "" -> "15"); the parent's numeric field
+  // is only clamped to a valid year count on blur.
+  const [mndaYearsText, setMndaYearsText] = useState(String(data.mndaTermYears));
+  const [confYearsText, setConfYearsText] = useState(
+    String(data.confidentialityTermYears),
+  );
+
+  function editYears(
+    setText: (value: string) => void,
+    key: "mndaTermYears" | "confidentialityTermYears",
+    event: ChangeEvent<HTMLInputElement>,
+  ) {
+    const raw = event.target.value;
+    setText(raw);
+    const parsed = Number(raw);
+    if (raw.trim() !== "" && Number.isFinite(parsed)) {
+      setField(key, Math.max(1, Math.round(parsed)));
+    }
+  }
+
+  function commitYears(
+    text: string,
+    setText: (value: string) => void,
+    key: "mndaTermYears" | "confidentialityTermYears",
+  ) {
+    const parsed = Math.max(1, Math.round(Number(text)) || 1);
+    setText(String(parsed));
+    setField(key, parsed);
+  }
 
   return (
     <form className="space-y-8" onSubmit={(event) => event.preventDefault()}>
@@ -125,8 +153,8 @@ export default function NdaForm({ data, onChange }: NdaFormProps) {
           />
         </div>
 
-        <div>
-          <span className={labelClass}>MNDA term</span>
+        <fieldset>
+          <legend className={labelClass}>MNDA term</legend>
           <div className="mt-1 space-y-2">
             <label className="flex items-center gap-2 text-sm text-slate-700">
               <input
@@ -142,9 +170,12 @@ export default function NdaForm({ data, onChange }: NdaFormProps) {
                 type="number"
                 min={1}
                 className="w-16 rounded-md border border-slate-300 px-2 py-1 text-sm"
-                value={data.mndaTermYears}
+                value={mndaYearsText}
                 onChange={(event) =>
-                  setField("mndaTermYears", numberValue(event))
+                  editYears(setMndaYearsText, "mndaTermYears", event)
+                }
+                onBlur={() =>
+                  commitYears(mndaYearsText, setMndaYearsText, "mndaTermYears")
                 }
                 disabled={data.mndaTermKind !== "fixed"}
               />
@@ -162,10 +193,10 @@ export default function NdaForm({ data, onChange }: NdaFormProps) {
               Continues until terminated
             </label>
           </div>
-        </div>
+        </fieldset>
 
-        <div>
-          <span className={labelClass}>Term of confidentiality</span>
+        <fieldset>
+          <legend className={labelClass}>Term of confidentiality</legend>
           <div className="mt-1 space-y-2">
             <label className="flex items-center gap-2 text-sm text-slate-700">
               <input
@@ -183,9 +214,20 @@ export default function NdaForm({ data, onChange }: NdaFormProps) {
                 type="number"
                 min={1}
                 className="w-16 rounded-md border border-slate-300 px-2 py-1 text-sm"
-                value={data.confidentialityTermYears}
+                value={confYearsText}
                 onChange={(event) =>
-                  setField("confidentialityTermYears", numberValue(event))
+                  editYears(
+                    setConfYearsText,
+                    "confidentialityTermYears",
+                    event,
+                  )
+                }
+                onBlur={() =>
+                  commitYears(
+                    confYearsText,
+                    setConfYearsText,
+                    "confidentialityTermYears",
+                  )
                 }
                 disabled={data.confidentialityTermKind !== "fixed"}
               />
@@ -206,7 +248,7 @@ export default function NdaForm({ data, onChange }: NdaFormProps) {
               In perpetuity
             </label>
           </div>
-        </div>
+        </fieldset>
       </fieldset>
 
       <fieldset className="space-y-3">

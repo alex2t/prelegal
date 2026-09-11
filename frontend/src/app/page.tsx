@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import NdaForm from "@/components/NdaForm";
 import NdaPreview from "@/components/NdaPreview";
 import {
   defaultFormData,
   missingRequiredFields,
   ndaFileSlug,
+  todayIso,
 } from "@/lib/nda";
 
 type DownloadState = "idle" | "working" | "error";
@@ -17,6 +18,17 @@ export default function Home() {
 
   const missing = useMemo(() => missingRequiredFields(data), [data]);
   const canDownload = missing.length === 0 && downloadState !== "working";
+
+  // Fill in today's date after mount, client-side, so it reflects the
+  // visitor's own local date instead of being frozen into a prerendered page.
+  // Ref-guarded (rather than a bare state check) so this reads as the
+  // one-time client sync it is, not a state-derived-from-state update.
+  const effectiveDateFilled = useRef(false);
+  useEffect(() => {
+    if (effectiveDateFilled.current) return;
+    effectiveDateFilled.current = true;
+    setData((prev) => (prev.effectiveDate ? prev : { ...prev, effectiveDate: todayIso() }));
+  }, []);
 
   async function handleDownload() {
     if (missing.length > 0) return;
@@ -31,7 +43,10 @@ export default function Home() {
       document.body.appendChild(link);
       link.click();
       link.remove();
-      URL.revokeObjectURL(url);
+      // Deferred rather than immediate: revoking the object URL right after
+      // click() can race the browser actually reading the blob to save the
+      // file (notably on Firefox), silently breaking the download.
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
       setDownloadState("idle");
     } catch (error) {
       console.error("Failed to generate NDA PDF", error);

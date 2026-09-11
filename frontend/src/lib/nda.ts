@@ -32,8 +32,13 @@ export interface NdaFormData {
   modifications: string;
 }
 
+/** Today's date in the caller's local timezone, as `yyyy-mm-dd`. */
 export function todayIso(): string {
-  return new Date().toISOString().slice(0, 10);
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 export const emptyParty: Party = {
@@ -48,7 +53,10 @@ export const defaultFormData: NdaFormData = {
   party2: { ...emptyParty },
   purpose:
     "Evaluating whether to enter into a business relationship with the other party.",
-  effectiveDate: todayIso(),
+  // Left blank rather than `todayIso()`: this constant is evaluated once at
+  // module load, which on a prerendered page would freeze "today" to build
+  // time. The page fills in the real local date on mount instead.
+  effectiveDate: "",
   mndaTermKind: "fixed",
   mndaTermYears: 1,
   confidentialityTermKind: "fixed",
@@ -98,6 +106,7 @@ export function missingRequiredFields(data: NdaFormData): string[] {
   if (!data.party1.company.trim()) missing.push("Party 1 company name");
   if (!data.party2.company.trim()) missing.push("Party 2 company name");
   if (!data.purpose.trim()) missing.push("Purpose");
+  if (!data.effectiveDate.trim()) missing.push("Effective date");
   if (!data.governingLaw.trim()) missing.push("Governing law");
   if (!data.jurisdiction.trim()) missing.push("Jurisdiction");
   return missing;
