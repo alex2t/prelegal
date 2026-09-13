@@ -90,6 +90,12 @@ celerybeat.pid
 # Frontend static export copied in for the Docker image
 backend/src/backend/static/
 
+# Local custom CA certs for machines behind TLS-inspecting antivirus/proxies
+# (Dockerfile trusts these during the build). Never commit an actual cert;
+# drop your own .crt/.pem in certificates/ if your network needs it.
+certificates/*
+!certificates/.gitkeep
+
 # Jupyter
 .ipynb_checkpoints
 
