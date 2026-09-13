@@ -65,5 +65,11 @@ Consider statically building teh frondend and serving it via FastAPI, if that wi
 - Dark Navy: #032147 (headings)
 - Gray text: #888888
 
+## Implementation Status
+
+- **Mutual NDA creator** (PL-3): frontend-only Next.js flow to fill in and generate the Mutual NDA cover page + standard terms. No AI chat yet.
+- **V1 foundation** (PL-4): `backend/` is a uv-managed FastAPI app; SQLite `users` table is recreated from scratch on every startup (schema only, no signup/signin endpoints yet). Frontend is statically exported and served by FastAPI from a single Docker image on port 8000. Login screen is fake (always succeeds, sets a client-side session flag) and gates the NDA creator — no real authentication. `scripts/start-*` / `stop-*` cover mac, linux, and windows (bash, PowerShell, batch).
+- **Not yet implemented**: AI chat, real authentication/signup, document templates other than the Mutual NDA, Cerebras/LiteLLM integration.
+
 
 
