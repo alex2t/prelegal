@@ -1,68 +1,107 @@
-import json
 from unittest.mock import MagicMock, patch
 
 from fastapi.testclient import TestClient
+from pydantic import BaseModel
 
-from backend.chat import ChatResponse, NdaFields
+from backend.chat import _RouterTurn
+from backend.documents.design_partner import DesignPartnerChatTurn, DesignPartnerFields
+from backend.documents.nda import NdaChatTurn, NdaFields
 from backend.main import app
 
 
-def _mock_completion(reply: str, fields: NdaFields) -> MagicMock:
+def _mock_completion(turn: BaseModel) -> MagicMock:
     response = MagicMock()
-    response.choices[0].message.content = ChatResponse(reply=reply, fields=fields).model_dump_json()
+    response.choices[0].message.content = turn.model_dump_json()
     return response
 
 
-def test_chat_returns_the_models_reply_and_fields() -> None:
-    fields = NdaFields(party1={"company": "Acme, Inc."}, purpose="Evaluating a partnership.")
-    mock_response = _mock_completion("Got it. Who is the second party?", fields)
+def test_chat_routes_to_mutual_nda_and_fills_fields() -> None:
+    router_turn = _RouterTurn(reply="Sure, let's set up your NDA.", document_type="mutual_nda")
+    fields = NdaFields(party1={"company": "Acme, Inc."})
+    filler_turn = NdaChatTurn(reply="Got it. Who is the second party?", fields=fields)
 
-    with patch("backend.chat.completion", return_value=mock_response) as mock_completion:
+    with patch(
+        "backend.chat.completion",
+        side_effect=[_mock_completion(router_turn), _mock_completion(filler_turn)],
+    ) as mock_completion:
         with TestClient(app) as client:
             response = client.post(
                 "/api/chat",
-                json={
-                    "messages": [{"role": "user", "content": "Acme, Inc. wants to evaluate a partnership."}],
-                    "fields": NdaFields().model_dump(),
-                },
+                json={"messages": [{"role": "user", "content": "I need an NDA with Acme, Inc."}]},
             )
 
     assert response.status_code == 200
     body = response.json()
+    assert body["document_type"] == "mutual_nda"
     assert body["reply"] == "Got it. Who is the second party?"
     assert body["fields"]["party1"]["company"] == "Acme, Inc."
-    assert body["fields"]["purpose"] == "Evaluating a partnership."
-
-    call_kwargs = mock_completion.call_args.kwargs
-    assert call_kwargs["response_format"] is ChatResponse
-    assert call_kwargs["messages"][0]["role"] == "system"
-    assert call_kwargs["messages"][-1] == {
-        "role": "user",
-        "content": "Acme, Inc. wants to evaluate a partnership.",
-    }
+    assert mock_completion.call_count == 2
 
 
-def test_chat_sends_current_known_fields_to_the_model() -> None:
-    fields = NdaFields(party1={"company": "Acme, Inc."})
-    mock_response = _mock_completion("Thanks!", fields)
+def test_chat_routes_to_design_partner_and_fills_fields() -> None:
+    router_turn = _RouterTurn(
+        reply="Sure, let's set up your Design Partner Agreement.",
+        document_type="design_partner_agreement",
+    )
+    fields = DesignPartnerFields(provider="Acme, Inc.")
+    filler_turn = DesignPartnerChatTurn(reply="Got it. Who is the partner?", fields=fields)
 
-    with patch("backend.chat.completion", return_value=mock_response) as mock_completion:
+    with patch(
+        "backend.chat.completion",
+        side_effect=[_mock_completion(router_turn), _mock_completion(filler_turn)],
+    ):
         with TestClient(app) as client:
-            client.post(
+            response = client.post(
                 "/api/chat",
-                json={"messages": [], "fields": fields.model_dump()},
+                json={"messages": [{"role": "user", "content": "I want a design partner agreement"}]},
             )
 
-    system_message = mock_completion.call_args.kwargs["messages"][0]["content"]
-    assert "Acme, Inc." in system_message
+    assert response.status_code == 200
+    body = response.json()
+    assert body["document_type"] == "design_partner_agreement"
+    assert body["fields"]["provider"] == "Acme, Inc."
+
+
+def test_chat_stays_undecided_when_the_router_is_unsure() -> None:
+    router_turn = _RouterTurn(reply="What kind of agreement do you need?", document_type="undecided")
+
+    with patch("backend.chat.completion", return_value=_mock_completion(router_turn)):
+        with TestClient(app) as client:
+            response = client.post(
+                "/api/chat",
+                json={"messages": [{"role": "user", "content": "Hi"}]},
+            )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["document_type"] is None
+    assert body["fields"] == {}
+    assert body["reply"] == "What kind of agreement do you need?"
+
+
+def test_chat_skips_the_router_once_document_type_is_known() -> None:
+    fields = NdaFields(party1={"company": "Acme, Inc."}, party2={"company": "Globex Corp."})
+    filler_turn = NdaChatTurn(reply="Thanks!", fields=fields)
+
+    with patch("backend.chat.completion", return_value=_mock_completion(filler_turn)) as mock_completion:
+        with TestClient(app) as client:
+            response = client.post(
+                "/api/chat",
+                json={
+                    "messages": [{"role": "user", "content": "Globex Corp. is the other party."}],
+                    "document_type": "mutual_nda",
+                    "fields": NdaFields(party1={"company": "Acme, Inc."}).model_dump(),
+                },
+            )
+
+    assert response.status_code == 200
+    assert response.json()["document_type"] == "mutual_nda"
+    mock_completion.assert_called_once()
 
 
 def test_chat_returns_502_when_the_llm_call_fails() -> None:
     with patch("backend.chat.completion", side_effect=RuntimeError("boom")):
         with TestClient(app) as client:
-            response = client.post(
-                "/api/chat",
-                json={"messages": [], "fields": NdaFields().model_dump()},
-            )
+            response = client.post("/api/chat", json={"messages": []})
 
     assert response.status_code == 502

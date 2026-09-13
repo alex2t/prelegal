@@ -1,22 +1,21 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { NdaFormData } from "@/lib/nda";
-import { ChatMessage, sendChatMessage } from "@/lib/ndaChat";
+import { ChatMessage, ChatTurn, DocumentType, sendChatMessage } from "@/lib/documentChat";
 
 const GREETING: ChatMessage = {
   role: "assistant",
-  content:
-    "Hi! Let's set up your Mutual NDA. To start, who are the two parties entering into this agreement?",
+  content: "Hi! What kind of agreement would you like to put together today?",
 };
 
-interface NdaChatProps {
-  fields: NdaFormData;
-  onFieldsChange: (fields: NdaFormData) => void;
+interface DocumentChatProps {
+  documentType: DocumentType | null;
+  fields: Record<string, unknown>;
+  onTurn: (turn: ChatTurn) => void;
 }
 
-/** Freeform chat that fills in the NDA fields via the backend AI endpoint. */
-export default function NdaChat({ fields, onFieldsChange }: NdaChatProps) {
+/** Freeform chat that figures out which document the user wants, then fills in its fields via the backend AI endpoint. */
+export default function DocumentChat({ documentType, fields, onTurn }: DocumentChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([GREETING]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
@@ -34,9 +33,9 @@ export default function NdaChat({ fields, onFieldsChange }: NdaChatProps) {
     setError(false);
 
     try {
-      const turn = await sendChatMessage(nextMessages, fields);
+      const turn = await sendChatMessage(nextMessages, documentType, fields);
       setMessages([...nextMessages, { role: "assistant", content: turn.reply }]);
-      onFieldsChange(turn.fields);
+      onTurn(turn);
     } catch {
       setError(true);
     } finally {
