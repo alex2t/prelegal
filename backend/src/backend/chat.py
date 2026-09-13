@@ -23,17 +23,20 @@ from backend.documents.design_partner import DesignPartnerChatTurn, DesignPartne
 from backend.documents.design_partner import system_prompt as design_partner_prompt
 from backend.documents.nda import NdaChatTurn, NdaFields
 from backend.documents.nda import system_prompt as nda_prompt
+from backend.documents.pilot import PilotChatTurn, PilotFields
+from backend.documents.pilot import system_prompt as pilot_prompt
 
 MODEL = "openrouter/openai/gpt-oss-120b"
 EXTRA_BODY = {"provider": {"order": ["cerebras"]}}
 
-DocumentType = Literal["mutual_nda", "design_partner_agreement"]
+DocumentType = Literal["mutual_nda", "design_partner_agreement", "pilot_agreement"]
 
 # Each supported document's field schema, its schema+reply "turn" wrapper
 # (the Structured Outputs response_format), and its system-prompt builder.
 _DOCUMENTS: dict[DocumentType, tuple[type[BaseModel], type[BaseModel], Callable[[BaseModel], str]]] = {
     "mutual_nda": (NdaFields, NdaChatTurn, nda_prompt),
     "design_partner_agreement": (DesignPartnerFields, DesignPartnerChatTurn, design_partner_prompt),
+    "pilot_agreement": (PilotFields, PilotChatTurn, pilot_prompt),
 }
 
 
@@ -56,7 +59,9 @@ class ChatResponse(BaseModel):
 
 class _RouterTurn(BaseModel):
     reply: str
-    document_type: Literal["mutual_nda", "design_partner_agreement", "undecided"] = "undecided"
+    document_type: Literal[
+        "mutual_nda", "design_partner_agreement", "pilot_agreement", "undecided"
+    ] = "undecided"
 
 
 def _router_prompt() -> str:
@@ -64,13 +69,13 @@ def _router_prompt() -> str:
         "You help route a user to one of this product's supported legal "
         "document templates based on freeform conversation.\n\n"
         f"{catalog_prompt()}\n\n"
-        "If the user's request matches one of the two [SUPPORTED] documents, "
+        "If the user's request matches one of the [SUPPORTED] documents, "
         "set document_type to it. If they ask for one of the other listed "
         "documents, explain briefly that it isn't supported yet and suggest "
         "whichever supported document is the closest fit, but don't set "
-        "document_type until they agree to proceed with one of the two. If "
-        "it's still unclear which of the two they want, keep document_type "
-        'as "undecided" and ask a clarifying question.'
+        "document_type until they agree to proceed with one of the supported "
+        "ones. If it's still unclear which supported document they want, "
+        'keep document_type as "undecided" and ask a clarifying question.'
     )
 
 

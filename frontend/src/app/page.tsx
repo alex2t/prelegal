@@ -6,6 +6,7 @@ import AuthGate from "@/components/AuthGate";
 import DocumentChat from "@/components/DocumentChat";
 import NdaPreview from "@/components/NdaPreview";
 import DesignPartnerPreview from "@/components/DesignPartnerPreview";
+import PilotPreview from "@/components/PilotPreview";
 import { currentEmail, logout } from "@/lib/auth";
 import { ChatTurn, DocumentType, mergeFields } from "@/lib/documentChat";
 import {
@@ -21,6 +22,12 @@ import {
   designPartnerFileSlug,
   type DesignPartnerFormData,
 } from "@/lib/designPartner";
+import {
+  defaultPilotFormData,
+  missingRequiredFields as missingPilotFields,
+  pilotFileSlug,
+  type PilotFormData,
+} from "@/lib/pilot";
 
 type DownloadState = "idle" | "working" | "error";
 
@@ -42,6 +49,13 @@ const DOCUMENT_META: Record<
     href: "https://github.com/CommonPaper/Design-Partner-Agreement",
     linkText: "Common Paper Design Partner Agreement",
   },
+  pilot_agreement: {
+    title: "Pilot Agreement creator",
+    blurb:
+      "Chat with the AI about your pilot, review the generated agreement, and download it as a PDF.",
+    href: "https://commonpaper.com/standards/pilot-agreement/1.1",
+    linkText: "Common Paper Pilot Agreement",
+  },
 };
 
 export default function Home() {
@@ -60,13 +74,15 @@ function DocumentCreator() {
   const [designPartnerData, setDesignPartnerData] = useState<DesignPartnerFormData>(
     defaultDesignPartnerFormData,
   );
+  const [pilotData, setPilotData] = useState<PilotFormData>(defaultPilotFormData);
   const [downloadState, setDownloadState] = useState<DownloadState>("idle");
 
   const missing = useMemo(() => {
     if (documentType === "mutual_nda") return missingNdaFields(ndaData);
     if (documentType === "design_partner_agreement") return missingDesignPartnerFields(designPartnerData);
+    if (documentType === "pilot_agreement") return missingPilotFields(pilotData);
     return [];
-  }, [documentType, ndaData, designPartnerData]);
+  }, [documentType, ndaData, designPartnerData, pilotData]);
   const canDownload = documentType !== null && missing.length === 0 && downloadState !== "working";
 
   // Fill in today's date after mount, client-side, so it reflects the
@@ -80,6 +96,7 @@ function DocumentCreator() {
     const today = todayIso();
     setNdaData((prev) => (prev.effectiveDate ? prev : { ...prev, effectiveDate: today }));
     setDesignPartnerData((prev) => (prev.effectiveDate ? prev : { ...prev, effectiveDate: today }));
+    setPilotData((prev) => (prev.effectiveDate ? prev : { ...prev, effectiveDate: today }));
   }, []);
 
   function handleTurn(turn: ChatTurn) {
@@ -93,6 +110,11 @@ function DocumentCreator() {
       setDesignPartnerData(
         (prev) =>
           mergeFields(prev as unknown as Record<string, unknown>, turn.fields) as unknown as DesignPartnerFormData,
+      );
+    } else if (turn.documentType === "pilot_agreement") {
+      setPilotData(
+        (prev) =>
+          mergeFields(prev as unknown as Record<string, unknown>, turn.fields) as unknown as PilotFormData,
       );
     }
   }
@@ -113,6 +135,12 @@ function DocumentCreator() {
           await generateDesignPartnerBlob(designPartnerData),
           `Design-Partner-Agreement-${designPartnerFileSlug(designPartnerData)}.pdf`,
         );
+      } else if (documentType === "pilot_agreement") {
+        const { generatePilotBlob } = await import("@/components/PilotPdf");
+        await triggerDownload(
+          await generatePilotBlob(pilotData),
+          `Pilot-Agreement-${pilotFileSlug(pilotData)}.pdf`,
+        );
       }
       setDownloadState("idle");
     } catch (error) {
@@ -131,7 +159,9 @@ function DocumentCreator() {
     ? ndaData
     : documentType === "design_partner_agreement"
       ? designPartnerData
-      : {}) as unknown as Record<string, unknown>;
+      : documentType === "pilot_agreement"
+        ? pilotData
+        : {}) as unknown as Record<string, unknown>;
 
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-10">
@@ -155,7 +185,7 @@ function DocumentCreator() {
                 (CC BY 4.0).
               </>
             ) : (
-              "Chat with the AI to start a Mutual NDA or a Design Partner Agreement."
+              "Chat with the AI to start a Mutual NDA, a Design Partner Agreement, or a Pilot Agreement."
             )}
           </p>
         </div>
@@ -206,6 +236,8 @@ function DocumentCreator() {
               <NdaPreview data={ndaData} />
             ) : documentType === "design_partner_agreement" ? (
               <DesignPartnerPreview data={designPartnerData} />
+            ) : documentType === "pilot_agreement" ? (
+              <PilotPreview data={pilotData} />
             ) : (
               <p className="text-sm text-slate-500">
                 Once you tell the chat which document you want, its preview will appear here.

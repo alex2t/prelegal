@@ -87,7 +87,7 @@ CATALOG: list[DocumentInfo] = [
         "Pilot Agreement",
         "For a time-limited paid or free evaluation of a product: pilot "
         "access and scope, fees, pilot period and success criteria.",
-        supported=False,
+        supported=True,
     ),
     DocumentInfo(
         "ai_addendum",
