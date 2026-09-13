@@ -87,6 +87,9 @@ celerybeat.pid
 *.sqlite
 *.sqlite3
 
+# Frontend static export copied in for the Docker image
+backend/src/backend/static/
+
 # Jupyter
 .ipynb_checkpoints
 
