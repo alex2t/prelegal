@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import AuthGate from "@/components/AuthGate";
-import NdaForm from "@/components/NdaForm";
+import NdaChat from "@/components/NdaChat";
 import NdaPreview from "@/components/NdaPreview";
 import { currentEmail, logout } from "@/lib/auth";
 import {
@@ -80,8 +80,8 @@ function NdaCreator() {
             Mutual NDA creator
           </h1>
           <p className="mt-1 text-sm text-slate-600">
-            Fill in the key terms, review the generated agreement, and download it
-            as a PDF. Based on the{" "}
+            Chat with the AI about your deal, review the generated agreement, and
+            download it as a PDF. Based on the{" "}
             <a
               className="underline"
               href="https://commonpaper.com/standards/mutual-nda/1.0/"
@@ -108,7 +108,7 @@ function NdaCreator() {
 
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <section aria-label="NDA details">
-          <NdaForm data={data} onChange={setData} />
+          <NdaChat fields={data} onFieldsChange={setData} />
         </section>
 
         <section aria-label="Document preview" className="lg:sticky lg:top-6 lg:self-start">
