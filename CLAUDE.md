@@ -7,7 +7,7 @@ This is Saas product to allow users to draft legal agreements based on templates
 
 @catalog.json
 
-Before we start: the initial implementation is a frontend-only prototype that only supports the Mutual NDA document withno AI chat
+See "Implementation Status" below for what's actually built vs. still pending.
 
 ## Development process
 
@@ -67,9 +67,13 @@ Consider statically building teh frondend and serving it via FastAPI, if that wi
 
 ## Implementation Status
 
-- **Mutual NDA creator** (PL-3): frontend-only Next.js flow to fill in and generate the Mutual NDA cover page + standard terms. No AI chat yet.
-- **V1 foundation** (PL-4): `backend/` is a uv-managed FastAPI app; SQLite `users` table is recreated from scratch on every startup (schema only, no signup/signin endpoints yet). Frontend is statically exported and served by FastAPI from a single Docker image on port 8000. Login screen is fake (always succeeds, sets a client-side session flag) and gates the NDA creator — no real authentication. `scripts/start-*` / `stop-*` cover mac, linux, and windows (bash, PowerShell, batch).
-- **Not yet implemented**: AI chat, real authentication/signup, document templates other than the Mutual NDA, Cerebras/LiteLLM integration.
+**Foundation**: `backend/` is a uv-managed FastAPI app. SQLite `users` table is recreated from scratch on every startup (schema only — no signup/signin endpoints yet). Frontend is a statically-exported Next.js app served by FastAPI from a single Docker image on port 8000. `scripts/start-*` / `stop-*` cover mac, linux, and windows (bash, PowerShell, batch). Login is fake (always succeeds, sets a client-side-only session flag) — there is no real authentication yet.
 
+**AI chat**: `backend/src/backend/chat.py` routes a freeform conversation to a supported document (or explains it can't and suggests the closest supported one) via LiteLLM/OpenRouter/Cerebras, then fills in that document's fields conversationally, always returning the complete field snapshot each turn. Each supported document has its own field schema + prompt (`backend/src/backend/documents/`), field/document-generator/standard-terms modules (`frontend/src/lib/`), and preview/PDF components (`frontend/src/components/`, sharing a common `CoverPageLayout`/`CoverPagePdfLayout`).
 
+**Documents supported (3 of the 11 in catalog.json)**: Mutual NDA, Design Partner Agreement, Pilot Agreement.
+
+**Not yet implemented**:
+- Real authentication/signup (the `users` table exists but has no endpoints).
+- The other 8 catalog.json templates (Cloud Service Agreement, Service Level Agreement, Professional Services Agreement, Data Processing Agreement, Software License Agreement, Partnership Agreement, Business Associate Agreement, AI Addendum). These vary a lot in complexity — some need a "this document attaches to another agreement" concept the app doesn't have yet, some need multi-tier field structures, one needs structured GDPR tables, and one (SLA) can't stand alone until Cloud Service Agreement exists. See PL-6's Jira comments for the full scoping notes.
 
