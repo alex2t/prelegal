@@ -1,52 +1,88 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { currentEmail, isAuthenticated, login, logout } from "./auth";
-
-// vitest runs in the "node" environment (no jsdom), so `window` is undefined
-// unless a test opts into a fake one via vi.stubGlobal.
-function stubBrowser() {
-  const store = new Map<string, string>();
-  vi.stubGlobal("window", {
-    localStorage: {
-      getItem: (key: string) => store.get(key) ?? null,
-      setItem: (key: string, value: string) => void store.set(key, value),
-      removeItem: (key: string) => void store.delete(key),
-    },
-  });
-}
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { currentUser, signIn, signOut, signUp } from "./auth";
 
 afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("without a browser environment", () => {
-  it("reports unauthenticated and no-ops on login/logout", () => {
-    expect(isAuthenticated()).toBe(false);
-    expect(currentEmail()).toBeNull();
-    expect(() => login("a@example.com")).not.toThrow();
-    expect(() => logout()).not.toThrow();
+describe("signUp", () => {
+  it("posts credentials and returns the created user", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ email: "a@example.com" }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const user = await signUp("a@example.com", "correct horse");
+
+    expect(user).toEqual({ email: "a@example.com" });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/signup",
+      expect.objectContaining({
+        method: "POST",
+        credentials: "include",
+        body: JSON.stringify({ email: "a@example.com", password: "correct horse" }),
+      }),
+    );
+  });
+
+  it("throws the backend's error detail on failure", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        json: async () => ({ detail: "An account with that email already exists." }),
+      }),
+    );
+
+    await expect(signUp("a@example.com", "correct horse")).rejects.toThrow(
+      "An account with that email already exists.",
+    );
   });
 });
 
-describe("with a browser environment", () => {
-  beforeEach(() => {
-    stubBrowser();
+describe("signIn", () => {
+  it("posts credentials and returns the signed-in user", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ ok: true, json: async () => ({ email: "a@example.com" }) }),
+    );
+
+    const user = await signIn("a@example.com", "correct horse");
+    expect(user).toEqual({ email: "a@example.com" });
   });
 
-  it("starts unauthenticated", () => {
-    expect(isAuthenticated()).toBe(false);
-    expect(currentEmail()).toBeNull();
+  it("throws a fallback message when the error body has no detail", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, json: async () => ({}) }));
+
+    await expect(signIn("a@example.com", "wrong")).rejects.toThrow("Sign in failed.");
+  });
+});
+
+describe("currentUser", () => {
+  it("returns the user when a session is active", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ ok: true, json: async () => ({ email: "a@example.com" }) }),
+    );
+
+    expect(await currentUser()).toEqual({ email: "a@example.com" });
   });
 
-  it("becomes authenticated after login, and remembers the email", () => {
-    login("a@example.com");
-    expect(isAuthenticated()).toBe(true);
-    expect(currentEmail()).toBe("a@example.com");
-  });
+  it("returns null when there's no active session", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false }));
 
-  it("clears the session on logout", () => {
-    login("a@example.com");
-    logout();
-    expect(isAuthenticated()).toBe(false);
-    expect(currentEmail()).toBeNull();
+    expect(await currentUser()).toBeNull();
+  });
+});
+
+describe("signOut", () => {
+  it("posts to the signout endpoint", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await signOut();
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/signout", { method: "POST", credentials: "include" });
   });
 });

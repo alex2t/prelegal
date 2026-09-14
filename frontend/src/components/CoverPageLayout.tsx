@@ -1,3 +1,5 @@
+import { LEGAL_DISCLAIMER } from "@/lib/disclaimer";
+
 export interface CoverPageLayoutField {
   heading: string;
   note?: string;
@@ -60,6 +62,10 @@ export default function CoverPageLayout({
         </h1>
         <p className="text-xs text-slate-500">Cover Page</p>
       </header>
+
+      <p className="rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-800">
+        {LEGAL_DISCLAIMER}
+      </p>
 
       <p>{introParagraph}</p>
       <p>{partiesParagraph}</p>

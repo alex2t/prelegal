@@ -67,7 +67,9 @@ Consider statically building teh frondend and serving it via FastAPI, if that wi
 
 ## Implementation Status
 
-**Foundation**: `backend/` is a uv-managed FastAPI app. SQLite `users` table is recreated from scratch on every startup (schema only — no signup/signin endpoints yet). Frontend is a statically-exported Next.js app served by FastAPI from a single Docker image on port 8000. `scripts/start-*` / `stop-*` cover mac, linux, and windows (bash, PowerShell, batch). Login is fake (always succeeds, sets a client-side-only session flag) — there is no real authentication yet.
+**Foundation**: `backend/` is a uv-managed FastAPI app. SQLite `users` and `documents` tables are recreated from scratch on every startup (no migrations). Frontend is a statically-exported Next.js app served by FastAPI from a single Docker image on port 8000. `scripts/start-*` / `stop-*` cover mac, linux, and windows (bash, PowerShell, batch).
+
+**Auth & document history**: Real sign up/sign in (`backend/src/backend/auth.py`, bcrypt-hashed passwords) with a signed httpOnly session cookie (Starlette's `SessionMiddleware`, a fresh random secret per process start — sessions invalidate on restart along with the rest of the temporary database, by design). `frontend/src/components/AuthGate.tsx` checks `/api/me` and exposes the signed-in user via React context (`useAuthUser()`). Every generated document is saved on download (`backend/src/backend/document_store.py`) and browsable read-only at `/documents`. Every generated document (on-screen and PDF) carries a "this is an AI-drafted, not attorney-reviewed" disclaimer (`frontend/src/lib/disclaimer.ts`).
 
 **AI chat**: `backend/src/backend/chat.py` routes a freeform conversation to whichever of the 11 catalog documents the user wants, then fills in that document's fields conversationally, always returning the complete field snapshot each turn. Each document has its own field schema + prompt (`backend/src/backend/documents/`), field/document-generator/standard-terms modules (`frontend/src/lib/`), and preview/PDF components (`frontend/src/components/`, sharing a common `CoverPageLayout`/`CoverPagePdfLayout`). `frontend/src/app/page.tsx` picks which document's UI to show via a `DOCUMENT_REGISTRY` keyed by document type.
 
@@ -80,6 +82,7 @@ Simplifications applied to the 8 added after the Mutual NDA/Design Partner Agree
 - DPA's GDPR annexes (subprocessor lists, data categories) are plain text fields, not structured tables.
 
 **Not yet implemented**:
-- Real authentication/signup (the `users` table exists but has no endpoints).
 - Real cross-document attachment (a BAA/AI Addendum/SLA that actually links to another generated document, rather than a free-text description of it).
+- Editing/resuming a saved document via chat (history is read-only preview + re-download for now).
+- Password reset/email verification, and a nav/dashboard shell (deliberately out of scope for PL-7 - see its Jira comments).
 

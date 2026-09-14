@@ -27,6 +27,18 @@ def init_db(db_path: Path = DB_PATH) -> None:
             )
             """
         )
+        connection.execute(
+            """
+            CREATE TABLE documents (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL REFERENCES users(id),
+                document_type TEXT NOT NULL,
+                title TEXT NOT NULL,
+                fields TEXT NOT NULL,
+                created_at TEXT NOT NULL DEFAULT (datetime('now'))
+            )
+            """
+        )
         connection.commit()
     finally:
         connection.close()

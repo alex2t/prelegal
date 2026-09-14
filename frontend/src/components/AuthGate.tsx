@@ -1,30 +1,33 @@
 "use client";
 
-import { useEffect, useSyncExternalStore } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { isAuthenticated } from "@/lib/auth";
+import { currentUser, type User } from "@/lib/auth";
 
-function subscribe(callback: () => void): () => void {
-  window.addEventListener("storage", callback);
-  return () => window.removeEventListener("storage", callback);
+const AuthContext = createContext<User | null>(null);
+
+/** The signed-in user, as provided by the nearest AuthGate. */
+export function useAuthUser(): User | null {
+  return useContext(AuthContext);
 }
 
-// Statically exported pages prerender with no `window`, so the server
-// snapshot is always "not authenticated"; useSyncExternalStore reconciles
-// against the real client value right after hydration.
-function getServerSnapshot(): boolean {
-  return false;
-}
-
-/** Redirects to /login unless the fake session flag is set. */
+/** Redirects to /login unless there's an active session; provides the signed-in user to its children. */
 export default function AuthGate({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const authed = useSyncExternalStore(subscribe, isAuthenticated, getServerSnapshot);
+  const [user, setUser] = useState<User | null | "loading">("loading");
 
   useEffect(() => {
-    if (!authed) router.replace("/login");
-  }, [authed, router]);
+    let cancelled = false;
+    currentUser().then((found) => {
+      if (cancelled) return;
+      setUser(found);
+      if (!found) router.replace("/login");
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [router]);
 
-  if (!authed) return null;
-  return <>{children}</>;
+  if (user === "loading" || user === null) return null;
+  return <AuthContext.Provider value={user}>{children}</AuthContext.Provider>;
 }

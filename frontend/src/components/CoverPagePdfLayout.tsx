@@ -8,6 +8,7 @@
  */
 
 import { Document, Page, Text, View } from "@react-pdf/renderer";
+import { LEGAL_DISCLAIMER } from "@/lib/disclaimer";
 import { coverPagePdfStyles as styles } from "./coverPagePdfStyles";
 import {
   CoverPageLayoutClause,
@@ -53,6 +54,8 @@ export function CoverPagePdfLayout({
       <Page size="LETTER" style={styles.page}>
         <Text style={styles.title}>{documentTitle}</Text>
         <Text style={styles.subtitle}>Cover Page</Text>
+
+        <Text style={styles.disclaimer}>{LEGAL_DISCLAIMER}</Text>
 
         <Text style={styles.paragraph}>{introParagraph}</Text>
         <Text style={styles.paragraph}>{partiesParagraph}</Text>

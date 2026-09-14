@@ -22,6 +22,13 @@ export const coverPagePdfStyles = StyleSheet.create({
     marginTop: 2,
     marginBottom: 16,
   },
+  disclaimer: {
+    fontSize: 8,
+    color: "#92400e",
+    backgroundColor: "#fffbeb",
+    padding: 6,
+    marginBottom: 12,
+  },
   paragraph: { marginBottom: 10 },
   fieldGroup: { marginBottom: 10 },
   fieldHeading: { fontFamily: "Helvetica-Bold" },

@@ -1,29 +1,55 @@
 /**
- * Fake session gate for the V1 foundation: no real authentication yet, just a
- * client-side flag set by the login screen so the app knows a user "signed
- * in". See PL-4.
+ * Calls the backend's session-cookie-based auth endpoints. The cookie is
+ * httpOnly, so the client can't read it directly - `currentUser()` asks the
+ * backend via `/api/me` instead of checking local state.
  */
 
-const STORAGE_KEY = "prelegal.auth.email";
-
-function hasWindow(): boolean {
-  return typeof window !== "undefined";
+export interface User {
+  email: string;
 }
 
-export function isAuthenticated(): boolean {
-  return hasWindow() && window.localStorage.getItem(STORAGE_KEY) !== null;
+async function parseErrorDetail(response: Response, fallback: string): Promise<string> {
+  try {
+    const body = await response.json();
+    return typeof body.detail === "string" ? body.detail : fallback;
+  } catch {
+    return fallback;
+  }
 }
 
-export function currentEmail(): string | null {
-  return hasWindow() ? window.localStorage.getItem(STORAGE_KEY) : null;
+export async function signUp(email: string, password: string): Promise<User> {
+  const response = await fetch("/api/signup", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+  if (!response.ok) {
+    throw new Error(await parseErrorDetail(response, "Sign up failed."));
+  }
+  return response.json();
 }
 
-export function login(email: string): void {
-  if (!hasWindow()) return;
-  window.localStorage.setItem(STORAGE_KEY, email);
+export async function signIn(email: string, password: string): Promise<User> {
+  const response = await fetch("/api/signin", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+  if (!response.ok) {
+    throw new Error(await parseErrorDetail(response, "Sign in failed."));
+  }
+  return response.json();
 }
 
-export function logout(): void {
-  if (!hasWindow()) return;
-  window.localStorage.removeItem(STORAGE_KEY);
+export async function signOut(): Promise<void> {
+  await fetch("/api/signout", { method: "POST", credentials: "include" });
+}
+
+/** Returns the signed-in user, or null if there's no active session. */
+export async function currentUser(): Promise<User | null> {
+  const response = await fetch("/api/me", { credentials: "include" });
+  if (!response.ok) return null;
+  return response.json();
 }
