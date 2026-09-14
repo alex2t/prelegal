@@ -4,7 +4,18 @@
  * extracts that document's field values, returning the model's next reply.
  */
 
-export type DocumentType = "mutual_nda" | "design_partner_agreement" | "pilot_agreement";
+export type DocumentType =
+  | "mutual_nda"
+  | "design_partner_agreement"
+  | "cloud_service_agreement"
+  | "service_level_agreement"
+  | "professional_services_agreement"
+  | "data_processing_agreement"
+  | "software_license_agreement"
+  | "partnership_agreement"
+  | "business_associate_agreement"
+  | "pilot_agreement"
+  | "ai_addendum";
 
 export interface ChatMessage {
   role: "user" | "assistant";

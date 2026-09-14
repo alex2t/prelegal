@@ -1,11 +1,10 @@
 """AI chat that fills in a legal document via conversation.
 
 Two phases per conversation: while `document_type` is unset, a small router
-call decides which supported document (if any) the user wants, explaining
-and suggesting an alternative if they ask for something unsupported. Once
-decided, subsequent turns use that document's own field-filling schema,
-which always returns the complete current field snapshot (not a diff) so
-the frontend can just replace its state - no merge logic needed either way.
+call decides which of the catalog's documents the user wants. Once decided,
+subsequent turns use that document's own field-filling schema, which always
+returns the complete current field snapshot (not a diff) so the frontend can
+just replace its state - no merge logic needed either way.
 
 Uses LiteLLM routed through OpenRouter with Cerebras as the inference
 provider, and Structured Outputs so each model reply parses directly into a
@@ -18,26 +17,72 @@ from typing import Literal
 from litellm import completion
 from pydantic import BaseModel
 
-from backend.documents.catalog import catalog_prompt
+from backend.documents.ai_addendum import AiAddendumChatTurn, AiAddendumFields
+from backend.documents.ai_addendum import system_prompt as ai_addendum_prompt
+from backend.documents.business_associate import BusinessAssociateChatTurn, BusinessAssociateFields
+from backend.documents.business_associate import system_prompt as business_associate_prompt
+from backend.documents.catalog import CATALOG, catalog_prompt
+from backend.documents.cloud_service import CloudServiceChatTurn, CloudServiceFields
+from backend.documents.cloud_service import system_prompt as cloud_service_prompt
+from backend.documents.data_processing import DataProcessingChatTurn, DataProcessingFields
+from backend.documents.data_processing import system_prompt as data_processing_prompt
 from backend.documents.design_partner import DesignPartnerChatTurn, DesignPartnerFields
 from backend.documents.design_partner import system_prompt as design_partner_prompt
 from backend.documents.nda import NdaChatTurn, NdaFields
 from backend.documents.nda import system_prompt as nda_prompt
+from backend.documents.partnership import PartnershipChatTurn, PartnershipFields
+from backend.documents.partnership import system_prompt as partnership_prompt
 from backend.documents.pilot import PilotChatTurn, PilotFields
 from backend.documents.pilot import system_prompt as pilot_prompt
+from backend.documents.professional_services import ProfessionalServicesChatTurn, ProfessionalServicesFields
+from backend.documents.professional_services import system_prompt as professional_services_prompt
+from backend.documents.service_level import ServiceLevelChatTurn, ServiceLevelFields
+from backend.documents.service_level import system_prompt as service_level_prompt
+from backend.documents.software_license import SoftwareLicenseChatTurn, SoftwareLicenseFields
+from backend.documents.software_license import system_prompt as software_license_prompt
 
 MODEL = "openrouter/openai/gpt-oss-120b"
 EXTRA_BODY = {"provider": {"order": ["cerebras"]}}
 
-DocumentType = Literal["mutual_nda", "design_partner_agreement", "pilot_agreement"]
+DocumentType = Literal[
+    "mutual_nda",
+    "design_partner_agreement",
+    "cloud_service_agreement",
+    "service_level_agreement",
+    "professional_services_agreement",
+    "data_processing_agreement",
+    "software_license_agreement",
+    "partnership_agreement",
+    "business_associate_agreement",
+    "pilot_agreement",
+    "ai_addendum",
+]
 
 # Each supported document's field schema, its schema+reply "turn" wrapper
 # (the Structured Outputs response_format), and its system-prompt builder.
 _DOCUMENTS: dict[DocumentType, tuple[type[BaseModel], type[BaseModel], Callable[[BaseModel], str]]] = {
     "mutual_nda": (NdaFields, NdaChatTurn, nda_prompt),
     "design_partner_agreement": (DesignPartnerFields, DesignPartnerChatTurn, design_partner_prompt),
+    "cloud_service_agreement": (CloudServiceFields, CloudServiceChatTurn, cloud_service_prompt),
+    "service_level_agreement": (ServiceLevelFields, ServiceLevelChatTurn, service_level_prompt),
+    "professional_services_agreement": (
+        ProfessionalServicesFields,
+        ProfessionalServicesChatTurn,
+        professional_services_prompt,
+    ),
+    "data_processing_agreement": (DataProcessingFields, DataProcessingChatTurn, data_processing_prompt),
+    "software_license_agreement": (SoftwareLicenseFields, SoftwareLicenseChatTurn, software_license_prompt),
+    "partnership_agreement": (PartnershipFields, PartnershipChatTurn, partnership_prompt),
+    "business_associate_agreement": (
+        BusinessAssociateFields,
+        BusinessAssociateChatTurn,
+        business_associate_prompt,
+    ),
     "pilot_agreement": (PilotFields, PilotChatTurn, pilot_prompt),
+    "ai_addendum": (AiAddendumFields, AiAddendumChatTurn, ai_addendum_prompt),
 }
+
+assert set(_DOCUMENTS) == {doc.id for doc in CATALOG}, "every catalog entry must have a document handler"
 
 
 class ChatMessage(BaseModel):
@@ -57,25 +102,35 @@ class ChatResponse(BaseModel):
     fields: dict = {}
 
 
+_RouterDocumentType = Literal[
+    "mutual_nda",
+    "design_partner_agreement",
+    "cloud_service_agreement",
+    "service_level_agreement",
+    "professional_services_agreement",
+    "data_processing_agreement",
+    "software_license_agreement",
+    "partnership_agreement",
+    "business_associate_agreement",
+    "pilot_agreement",
+    "ai_addendum",
+    "undecided",
+]
+
+
 class _RouterTurn(BaseModel):
     reply: str
-    document_type: Literal[
-        "mutual_nda", "design_partner_agreement", "pilot_agreement", "undecided"
-    ] = "undecided"
+    document_type: _RouterDocumentType = "undecided"
 
 
 def _router_prompt() -> str:
     return (
-        "You help route a user to one of this product's supported legal "
-        "document templates based on freeform conversation.\n\n"
+        "You help route a user to one of this product's legal document "
+        "templates based on freeform conversation.\n\n"
         f"{catalog_prompt()}\n\n"
-        "If the user's request matches one of the [SUPPORTED] documents, "
-        "set document_type to it. If they ask for one of the other listed "
-        "documents, explain briefly that it isn't supported yet and suggest "
-        "whichever supported document is the closest fit, but don't set "
-        "document_type until they agree to proceed with one of the supported "
-        "ones. If it's still unclear which supported document they want, "
-        'keep document_type as "undecided" and ask a clarifying question.'
+        "Set document_type to whichever document the user's request matches. "
+        'If it\'s not yet clear which one they want, keep document_type as '
+        '"undecided" and ask a clarifying question.'
     )
 
 

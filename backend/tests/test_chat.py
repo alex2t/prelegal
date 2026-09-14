@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 from pydantic import BaseModel
 
 from backend.chat import _RouterTurn
+from backend.documents.cloud_service import CloudServiceChatTurn, CloudServiceFields
 from backend.documents.design_partner import DesignPartnerChatTurn, DesignPartnerFields
 from backend.documents.nda import NdaChatTurn, NdaFields
 from backend.documents.pilot import PilotChatTurn, PilotFields
@@ -84,6 +85,32 @@ def test_chat_routes_to_pilot_agreement_and_fills_fields() -> None:
     assert response.status_code == 200
     body = response.json()
     assert body["document_type"] == "pilot_agreement"
+    assert body["fields"]["provider"] == "Acme, Inc."
+
+
+def test_chat_routes_to_a_newly_added_document_type() -> None:
+    """Confirms the _DOCUMENTS registry generically handles a document added
+    after the original three (PL-10's batch), not just the first ones wired."""
+    router_turn = _RouterTurn(
+        reply="Sure, let's set up your Cloud Service Agreement.",
+        document_type="cloud_service_agreement",
+    )
+    fields = CloudServiceFields(provider="Acme, Inc.")
+    filler_turn = CloudServiceChatTurn(reply="Got it. Who is the customer?", fields=fields)
+
+    with patch(
+        "backend.chat.completion",
+        side_effect=[_mock_completion(router_turn), _mock_completion(filler_turn)],
+    ):
+        with TestClient(app) as client:
+            response = client.post(
+                "/api/chat",
+                json={"messages": [{"role": "user", "content": "I need a cloud service agreement"}]},
+            )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["document_type"] == "cloud_service_agreement"
     assert body["fields"]["provider"] == "Acme, Inc."
 
 
