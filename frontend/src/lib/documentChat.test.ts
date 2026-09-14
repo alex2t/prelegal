@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { mergeFields, sendChatMessage } from "./documentChat";
+import { buildGreeting, mergeFields, sendChatMessage } from "./documentChat";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -57,6 +57,15 @@ describe("sendChatMessage", () => {
     await expect(sendChatMessage([], null, {})).rejects.toThrow(
       "AI chat is unavailable right now.",
     );
+  });
+});
+
+describe("buildGreeting", () => {
+  it("lists every document name as a bullet point", () => {
+    const greeting = buildGreeting(["Mutual NDA", "Pilot Agreement"]);
+    expect(greeting.role).toBe("assistant");
+    expect(greeting.content).toContain("- Mutual NDA");
+    expect(greeting.content).toContain("- Pilot Agreement");
   });
 });
 

@@ -272,6 +272,11 @@ const DOCUMENT_REGISTRY: Record<DocumentType, DocumentConfig> = {
 
 const DOCUMENT_TYPES = Object.keys(DOCUMENT_REGISTRY) as DocumentType[];
 
+// Display names for the chat's opening greeting, derived from each
+// document's title (e.g. "Pilot Agreement creator" -> "Pilot Agreement")
+// rather than duplicating a second list of document names to keep in sync.
+const DOCUMENT_NAMES = DOCUMENT_TYPES.map((type) => DOCUMENT_REGISTRY[type].title.replace(/ creator$/, ""));
+
 function initialDataByType(): Record<DocumentType, FieldData> {
   const entries = DOCUMENT_TYPES.map((type) => [type, DOCUMENT_REGISTRY[type].defaultData] as const);
   return Object.fromEntries(entries) as Record<DocumentType, FieldData>;
@@ -392,7 +397,12 @@ function DocumentCreator() {
 
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <section aria-label="Document chat">
-          <DocumentChat documentType={documentType} fields={activeData} onTurn={handleTurn} />
+          <DocumentChat
+            documentType={documentType}
+            fields={activeData}
+            documentNames={DOCUMENT_NAMES}
+            onTurn={handleTurn}
+          />
         </section>
 
         <section aria-label="Document preview" className="lg:sticky lg:top-6 lg:self-start">

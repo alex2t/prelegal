@@ -1,25 +1,28 @@
 "use client";
 
-import { FormEvent, useState } from "react";
-import { ChatMessage, ChatTurn, DocumentType, sendChatMessage } from "@/lib/documentChat";
-
-const GREETING: ChatMessage = {
-  role: "assistant",
-  content: "Hi! What kind of agreement would you like to put together today?",
-};
+import { FormEvent, useEffect, useRef, useState } from "react";
+import { buildGreeting, ChatMessage, ChatTurn, DocumentType, sendChatMessage } from "@/lib/documentChat";
 
 interface DocumentChatProps {
   documentType: DocumentType | null;
   fields: Record<string, unknown>;
+  documentNames: string[];
   onTurn: (turn: ChatTurn) => void;
 }
 
 /** Freeform chat that figures out which document the user wants, then fills in its fields via the backend AI endpoint. */
-export default function DocumentChat({ documentType, fields, onTurn }: DocumentChatProps) {
-  const [messages, setMessages] = useState<ChatMessage[]>([GREETING]);
+export default function DocumentChat({ documentType, fields, documentNames, onTurn }: DocumentChatProps) {
+  const [messages, setMessages] = useState<ChatMessage[]>(() => [buildGreeting(documentNames)]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Keep the cursor in the input after every AI turn (and on first mount) so
+  // the user can keep typing without having to click back into the field.
+  useEffect(() => {
+    if (!sending) inputRef.current?.focus();
+  }, [sending]);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -51,8 +54,8 @@ export default function DocumentChat({ documentType, fields, onTurn }: DocumentC
             key={index}
             className={
               message.role === "assistant"
-                ? "max-w-[85%] rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-900"
-                : "ml-auto max-w-[85%] rounded-lg bg-[#209dd7] px-3 py-2 text-sm text-white"
+                ? "max-w-[85%] whitespace-pre-line rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-900"
+                : "ml-auto max-w-[85%] whitespace-pre-line rounded-lg bg-[#209dd7] px-3 py-2 text-sm text-white"
             }
           >
             {message.content}
@@ -67,6 +70,7 @@ export default function DocumentChat({ documentType, fields, onTurn }: DocumentC
       </div>
       <form onSubmit={handleSubmit} className="flex gap-2 border-t border-slate-200 p-3">
         <input
+          ref={inputRef}
           className="flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-[#209dd7] focus:ring-1 focus:ring-[#209dd7]"
           value={input}
           onChange={(event) => setInput(event.target.value)}

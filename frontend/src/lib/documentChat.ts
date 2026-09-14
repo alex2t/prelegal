@@ -50,6 +50,15 @@ export function mergeFields(
   return merged;
 }
 
+/** The opening chat message, listing every document the AI can fill in. */
+export function buildGreeting(documentNames: string[]): ChatMessage {
+  const bullets = documentNames.map((name) => `- ${name}`).join("\n");
+  return {
+    role: "assistant",
+    content: `Hi! I can help you put together any of these documents:\n${bullets}\n\nTell me what you need and I'll get started.`,
+  };
+}
+
 export async function sendChatMessage(
   messages: ChatMessage[],
   documentType: DocumentType | null,
